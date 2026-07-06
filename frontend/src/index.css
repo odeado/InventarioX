@@ -58,9 +58,15 @@
 .theme-custom input,
 .theme-custom select,
 .theme-custom textarea {
-  background-color: var(--theme-app-bg) !important;
+  background-color: var(--theme-card-bg) !important;
   color: var(--theme-text-main) !important;
   border-color: var(--theme-border-main) !important;
+}
+
+.theme-custom input::placeholder,
+.theme-custom textarea::placeholder {
+  color: var(--theme-text-main) !important;
+  opacity: 0.5;
 }
 
 .theme-custom th,
