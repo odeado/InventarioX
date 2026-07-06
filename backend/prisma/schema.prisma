@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          String   @default("ADMIN") // ADMIN, EMPLOYEE
+  createdAt     DateTime @default(now())
+}
+
+model Settings {
+  id              String   @id @default("1")
+  companyName     String   @default("Mi Empresa")
+  logoUrl         String?
+  themeColors     String   @default("#0f172a") // Tailwind slate-900
+  address         String?
+  phone           String?
+  email           String?
+  website         String?
+  currency        String   @default("USD")
+  taxRate         Float    @default(0.0)
+  invoiceFooter   String?
+  invoicePrefix   String   @default("INV-")
+  nextInvoiceNum  Int      @default(1)
+  updatedAt       DateTime @updatedAt
+  taxId           String?
+  activity        String?
+}
+
+model Client {
+  id        String    @id @default(uuid())
+  name      String
+  company   String?
+  taxId     String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  invoices  Invoice[]
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  sku         String?       @unique
+  name        String
+  description String?
+  price       Float
+  stock       Int?          @default(0)
+  category    String?
+  createdAt   DateTime      @default(now())
+  invoiceItems InvoiceItem[]
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  number      String        @unique
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  status      String        @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
+  subtotal    Float
+  taxAmount   Float
+  discount    Float         @default(0)
+  total       Float
+  notes       String?
+  issueDate   DateTime      @default(now())
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  items       InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+}

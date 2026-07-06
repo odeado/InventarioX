@@ -1,0 +1,24 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Databases
+backend/dev.db
+backend/dev.db-journal
+*.db
+*.db-journal
+
+# Environment / Secret keys
+.env
+.env.local
+.env.*.local
+
+# Frontend Build
+frontend/dist/
+frontend/dist-ssr/
+
+# IDE / System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
