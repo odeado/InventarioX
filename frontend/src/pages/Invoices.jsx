@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Plus, Search, FileText, Download, Trash2, CheckCircle } from 'lucide-react';
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Plus, Search, FileText, Download, Trash2, CheckCircle, Printer } from 'lucide-react';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image, pdf } from '@react-pdf/renderer';
 
 export const InvoicePDF = ({ invoice, settings }) => {
   const themeColor = settings?.themeColors || '#3b82f6';
@@ -406,6 +406,18 @@ const Invoices = () => {
                           </button>
                         )}
                       </PDFDownloadLink>
+                      <button 
+                        onClick={async () => {
+                          const doc = <InvoicePDF invoice={inv} settings={settings} />;
+                          const blob = await pdf(doc).toBlob();
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, '_blank');
+                        }}
+                        className="p-2 text-primary-600 hover:bg-primary-50 transition rounded-lg border border-transparent hover:border-primary-200"
+                        title="Imprimir Factura"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={async () => { if(confirm("¿Seguro que deseas eliminar esta factura?")) { await api.delete(`/invoices/${inv.id}`); fetchData(); } }}
                         className="p-2 text-gray-400 hover:text-red-600 transition hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200" title="Eliminar"

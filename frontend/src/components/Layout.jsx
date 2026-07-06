@@ -9,6 +9,15 @@ const Layout = () => {
   const location = useLocation();
   const [appSettings, setAppSettings] = useState(null);
 
+  const getBrightness = (hex) => {
+    if (!hex || hex.length < 6) return 128;
+    const cleanHex = hex.replace('#', '');
+    const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+    const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+    const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+    return (r * 299 + g * 587 + b * 114) / 1000;
+  };
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -18,6 +27,23 @@ const Layout = () => {
           // Aplicamos una manera sencilla de sobreescribir el color principal en tailwind 4 dinámicamente
           document.documentElement.style.setProperty('--color-primary-600', data.themeColors);
           document.documentElement.style.setProperty('--color-primary-500', data.themeColors);
+        }
+        if (data.themeBgColor) {
+          const isLight = getBrightness(data.themeBgColor) > 130;
+          document.documentElement.style.setProperty('--theme-app-bg', data.themeBgColor);
+          const cardBg = isLight ? '#ffffff' : '#1e293b';
+          const borderBg = isLight ? '#e2e8f0' : '#334155';
+          document.documentElement.style.setProperty('--theme-card-bg', cardBg);
+          document.documentElement.style.setProperty('--theme-border-main', borderBg);
+        } else {
+          document.documentElement.style.setProperty('--theme-app-bg', '#0f172a');
+          document.documentElement.style.setProperty('--theme-card-bg', '#1e293b');
+          document.documentElement.style.setProperty('--theme-border-main', '#334155');
+        }
+        if (data.themeTextColor) {
+          document.documentElement.style.setProperty('--theme-text-main', data.themeTextColor);
+        } else {
+          document.documentElement.style.setProperty('--theme-text-main', '#ffffff');
         }
       } catch (err) {}
     };
@@ -34,22 +60,22 @@ const Layout = () => {
 
   return (
     <div 
-      className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300"
+      className="theme-custom flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300"
       style={{
-        backgroundColor: appSettings?.themeBgColor || undefined,
-        color: appSettings?.themeTextColor || undefined
+        backgroundColor: 'var(--theme-app-bg)',
+        color: 'var(--theme-text-main)'
       }}
     >
       {/* Sidebar */}
       <aside 
         className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex flex-col transition-colors duration-300"
         style={{
-          backgroundColor: appSettings?.themeBgColor || undefined,
-          color: appSettings?.themeTextColor || undefined,
-          borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined
+          backgroundColor: 'var(--theme-card-bg)',
+          color: 'var(--theme-text-main)',
+          borderColor: 'var(--theme-border-main)'
         }}
       >
-        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700" style={{ borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined }}>
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700" style={{ borderColor: 'var(--theme-border-main)' }}>
           <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
             {appSettings?.logoUrl ? (
               <img src={appSettings.logoUrl} alt="Logo" className="h-8 max-w-[140px] object-contain" />
@@ -75,7 +101,7 @@ const Layout = () => {
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400 font-medium' 
                     : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'
                 }`}
-                style={isActive ? undefined : { color: appSettings?.themeTextColor ? `${appSettings.themeTextColor}cc` : undefined }}
+                style={isActive ? undefined : { color: 'var(--theme-text-main)' }}
               >
                 <Icon className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : ''}`} />
                 {item.name}
@@ -84,14 +110,14 @@ const Layout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700" style={{ borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined }}>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700" style={{ borderColor: 'var(--theme-border-main)' }}>
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate" style={{ color: appSettings?.themeTextColor ? `${appSettings.themeTextColor}aa` : undefined }}>{user?.role}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate" style={{ color: 'var(--theme-text-main)' }}>{user?.role}</p>
             </div>
           </div>
           <button 
@@ -109,12 +135,12 @@ const Layout = () => {
         <header 
           className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 z-10 sticky top-0 transition-colors duration-300"
           style={{
-            backgroundColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}cc` : undefined,
-            color: appSettings?.themeTextColor || undefined,
-            borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined
+            backgroundColor: 'var(--theme-card-bg)',
+            color: 'var(--theme-text-main)',
+            borderColor: 'var(--theme-border-main)'
           }}
         >
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100" style={{ color: appSettings?.themeTextColor || undefined }}>
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100" style={{ color: 'var(--theme-text-main)' }}>
             {navItems.find(i => i.path === location.pathname)?.name || 'Detalles'}
           </h1>
         </header>
@@ -122,7 +148,7 @@ const Layout = () => {
         <div 
           className="flex-1 overflow-y-auto p-8"
           style={{
-            backgroundColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}1c` : undefined
+            backgroundColor: 'var(--theme-app-bg)'
           }}
         >
           <Outlet />

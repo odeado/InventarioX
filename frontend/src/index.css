@@ -11,14 +11,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --theme-app-bg: #0f172a;
+    --theme-card-bg: #1e293b;
+    --theme-text-main: #ffffff;
+    --theme-border-main: #334155;
   }
+}
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-  }
+/* Custom Uniform Theme overrides */
+.theme-custom {
+  background-color: var(--theme-app-bg) !important;
+  color: var(--theme-text-main) !important;
+}
+
+.theme-custom .bg-white,
+.theme-custom .dark\:bg-gray-800,
+.theme-custom .dark\:bg-slate-800 {
+  background-color: var(--theme-card-bg) !important;
+}
+
+.theme-custom .text-gray-900,
+.theme-custom .dark\:text-white,
+.theme-custom .dark\:text-gray-100,
+.theme-custom .dark\:text-gray-300,
+.theme-custom .text-gray-800,
+.theme-custom .dark\:text-gray-200 {
+  color: var(--theme-text-main) !important;
+}
+
+.theme-custom .border-gray-200,
+.theme-custom .dark\:border-gray-700,
+.theme-custom .border-gray-100,
+.theme-custom .border-gray-150 {
+  border-color: var(--theme-border-main) !important;
+}
+
+.theme-custom .bg-gray-50,
+.theme-custom .dark\:bg-gray-700\/30,
+.theme-custom .dark\:bg-gray-700\/50,
+.theme-custom .dark\:bg-gray-800\/50,
+.theme-custom .bg-gray-50\/80,
+.theme-custom .bg-white\/80 {
+  background-color: var(--theme-app-bg) !important;
+}
+
+.theme-custom input,
+.theme-custom select,
+.theme-custom textarea {
+  background-color: var(--theme-app-bg) !important;
+  color: var(--theme-text-main) !important;
+  border-color: var(--theme-border-main) !important;
+}
+
+.theme-custom th,
+.theme-custom thead {
+  background-color: var(--theme-app-bg) !important;
+  color: var(--theme-text-main) !important;
 }
 
 @layer base {

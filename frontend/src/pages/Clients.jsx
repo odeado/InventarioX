@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Plus, Search, Edit2, Trash2, FileText, Download, CheckCircle, X } from 'lucide-react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { Plus, Search, Edit2, Trash2, FileText, Download, CheckCircle, X, Printer } from 'lucide-react';
+import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import { InvoicePDF } from './Invoices';
 
 const Clients = () => {
@@ -442,6 +442,18 @@ const Clients = () => {
                             </button>
                           )}
                         </PDFDownloadLink>
+                        <button 
+                          onClick={async () => {
+                            const doc = <InvoicePDF invoice={inv} settings={settings} />;
+                            const blob = await pdf(doc).toBlob();
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                          }}
+                          className="p-1.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/30 rounded-lg border border-transparent hover:border-primary-200 dark:hover:border-primary-900/50 transition"
+                          title="Imprimir Factura"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
