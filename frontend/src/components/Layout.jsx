@@ -33,10 +33,23 @@ const Layout = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+    <div 
+      className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300"
+      style={{
+        backgroundColor: appSettings?.themeBgColor || undefined,
+        color: appSettings?.themeTextColor || undefined
+      }}
+    >
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
+      <aside 
+        className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm flex flex-col transition-colors duration-300"
+        style={{
+          backgroundColor: appSettings?.themeBgColor || undefined,
+          color: appSettings?.themeTextColor || undefined,
+          borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined
+        }}
+      >
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700" style={{ borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined }}>
           <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
             {appSettings?.logoUrl ? (
               <img src={appSettings.logoUrl} alt="Logo" className="h-8 max-w-[140px] object-contain" />
@@ -60,8 +73,9 @@ const Layout = () => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                   isActive 
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400 font-medium' 
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'
                 }`}
+                style={isActive ? undefined : { color: appSettings?.themeTextColor ? `${appSettings.themeTextColor}cc` : undefined }}
               >
                 <Icon className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : ''}`} />
                 {item.name}
@@ -70,14 +84,14 @@ const Layout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700" style={{ borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined }}>
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.role}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate" style={{ color: appSettings?.themeTextColor ? `${appSettings.themeTextColor}aa` : undefined }}>{user?.role}</p>
             </div>
           </div>
           <button 
@@ -92,14 +106,25 @@ const Layout = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 z-10 sticky top-0">
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+        <header 
+          className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 z-10 sticky top-0 transition-colors duration-300"
+          style={{
+            backgroundColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}cc` : undefined,
+            color: appSettings?.themeTextColor || undefined,
+            borderColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}33` : undefined
+          }}
+        >
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100" style={{ color: appSettings?.themeTextColor || undefined }}>
             {navItems.find(i => i.path === location.pathname)?.name || 'Detalles'}
           </h1>
-          {/* Theme toggle could go here */}
         </header>
         
-        <div className="flex-1 overflow-y-auto p-8">
+        <div 
+          className="flex-1 overflow-y-auto p-8"
+          style={{
+            backgroundColor: appSettings?.themeBgColor ? `${appSettings.themeBgColor}1c` : undefined
+          }}
+        >
           <Outlet />
         </div>
       </main>
