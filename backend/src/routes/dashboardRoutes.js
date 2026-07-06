@@ -1,37 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../utils/db');
+const { db } = require('../utils/firebase');
+const { collection, getDocs } = require('firebase/firestore');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
 
 router.get('/stats', async (req, res) => {
   try {
-    const clientsCount = await prisma.client.count();
-    const productsCount = await prisma.product.count();
-    const invoicesCount = await prisma.invoice.count();
-    
-    const invoices = await prisma.invoice.findMany();
+    // Obtener contadores básicos
+    const clientsSnapshot = await getDocs(collection(db, 'clients'));
+    const productsSnapshot = await getDocs(collection(db, 'products'));
+    const invoicesSnapshot = await getDocs(collection(db, 'invoices'));
+
+    const clientsCount = clientsSnapshot.size;
+    const productsCount = productsSnapshot.size;
+    const invoicesCount = invoicesSnapshot.size;
+
+    const invoices = [];
+    invoicesSnapshot.forEach(doc => {
+      invoices.push(doc.data());
+    });
+
     const totalRevenue = invoices.reduce((acc, inv) => acc + inv.total, 0);
     const pendingInvoices = invoices.filter(inv => inv.status === 'PENDING').length;
     const paidInvoices = invoices.filter(inv => inv.status === 'PAID').length;
 
-    // Obtener ventas mensuales reales de los últimos 6 meses
+    // Calcular ventas de los últimos 6 meses reales
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0, 0, 0, 0);
 
-    const recentInvoices = await prisma.invoice.findMany({
-      where: {
-        createdAt: {
-          gte: sixMonthsAgo
-        }
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
+    // Filtramos las facturas en memoria para no requerir configuración de índices en Firestore
+    const recentInvoices = invoices.filter(inv => new Date(inv.createdAt) >= sixMonthsAgo);
+    recentInvoices.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     const salesByMonth = {};
     for (let i = 5; i >= 0; i--) {
@@ -52,11 +55,18 @@ router.get('/stats', async (req, res) => {
 
     const monthlySales = Object.values(salesByMonth);
 
-    // Obtener los ultimos 5
-    const latestInvoices = await prisma.invoice.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { client: true }
+    // Obtener las últimas 5 facturas
+    const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const latestInvoices = sortedInvoices.slice(0, 5);
+
+    // Cargar los clientes para las últimas 5 facturas
+    const clientsMap = {};
+    clientsSnapshot.forEach(doc => {
+      clientsMap[doc.id] = doc.data();
+    });
+
+    latestInvoices.forEach(inv => {
+      inv.client = clientsMap[inv.clientId] || null;
     });
 
     res.json({

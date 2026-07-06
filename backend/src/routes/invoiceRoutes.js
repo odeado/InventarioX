@@ -1,16 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../utils/db');
+const { db } = require('../utils/firebase');
+const { collection, getDocs, doc, getDoc, setDoc, deleteDoc } = require('firebase/firestore');
 const authMiddleware = require('../middleware/auth');
+const crypto = require('crypto');
 
 router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   try {
-    const invoices = await prisma.invoice.findMany({
-      include: { client: true },
-      orderBy: { createdAt: 'desc' }
+    const querySnapshot = await getDocs(collection(db, 'invoices'));
+    const invoices = [];
+    querySnapshot.forEach(doc => {
+      invoices.push(doc.data());
     });
+
+    // Cargar los clientes en un solo llamado para optimizar
+    const clientsSnapshot = await getDocs(collection(db, 'clients'));
+    const clientsMap = {};
+    clientsSnapshot.forEach(doc => {
+      clientsMap[doc.id] = doc.data();
+    });
+
+    invoices.forEach(inv => {
+      inv.client = clientsMap[inv.clientId] || null;
+    });
+
+    invoices.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json(invoices);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -20,43 +36,55 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { clientId, status, subtotal, taxAmount, discount, total, notes, dueDate, items } = req.body;
   try {
-    // Generar numero de factura
-    const settings = await prisma.settings.findUnique({ where: { id: "1" } });
-    const nextNum = settings ? settings.nextInvoiceNum : 1;
-    const prefix = settings ? settings.invoicePrefix : "INV-";
-    const number = `${prefix}${String(nextNum).padStart(5, '0')}`;
-
-    // Actualizar numero de factura
-    if (settings) {
-      await prisma.settings.update({ where: { id: "1" }, data: { nextInvoiceNum: nextNum + 1 } });
+    const id = crypto.randomUUID();
+    
+    // Obtener y actualizar número de factura
+    const settingsRef = doc(db, 'settings', '1');
+    const settingsDoc = await getDoc(settingsRef);
+    let nextNum = 1;
+    let prefix = 'INV-';
+    
+    if (settingsDoc.exists()) {
+      const settingsData = settingsDoc.data();
+      nextNum = settingsData.nextInvoiceNum || 1;
+      prefix = settingsData.invoicePrefix || 'INV-';
+      
+      // Incrementar el número siguiente en settings
+      await setDoc(settingsRef, { nextInvoiceNum: nextNum + 1 }, { merge: true });
     }
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        number,
-        clientId,
-        status: status || "PENDING",
-        subtotal,
-        taxAmount,
-        discount: discount || 0,
-        total,
-        notes,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.quantity * item.unitPrice
-          }))
-        }
-      },
-      include: { items: true, client: true }
-    });
+    const number = `${prefix}${String(nextNum).padStart(5, '0')}`;
 
-    // Opcional: reducir stock (puede manejarse segun regla de negocio)
+    // Obtener detalles de productos para cada item
+    const itemsWithProducts = await Promise.all(items.map(async (item) => {
+      const productDoc = await getDoc(doc(db, 'products', item.productId));
+      const productData = productDoc.exists() ? productDoc.data() : { name: item.name };
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+        product: productData
+      };
+    }));
 
-    res.json(invoice);
+    const invoiceData = {
+      id,
+      number,
+      clientId,
+      status: status || "PENDING",
+      subtotal,
+      taxAmount,
+      discount: discount || 0,
+      total,
+      notes: notes || null,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      createdAt: new Date().toISOString(),
+      items: itemsWithProducts
+    };
+
+    await setDoc(doc(db, 'invoices', id), invoiceData);
+    res.json(invoiceData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -64,10 +92,16 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: req.params.id },
-      include: { items: { include: { product: true } }, client: true }
-    });
+    const invoiceDoc = await getDoc(doc(db, 'invoices', req.params.id));
+    if (!invoiceDoc.exists()) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const invoice = invoiceDoc.data();
+
+    // Obtener detalles del cliente
+    const clientDoc = await getDoc(doc(db, 'clients', invoice.clientId));
+    invoice.client = clientDoc.exists() ? clientDoc.data() : null;
+
     res.json(invoice);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -76,11 +110,14 @@ router.get('/:id', async (req, res) => {
 
 router.put('/:id/status', async (req, res) => {
   try {
-    const invoice = await prisma.invoice.update({
-      where: { id: req.params.id },
-      data: { status: req.body.status }
-    });
-    res.json(invoice);
+    const invoiceRef = doc(db, 'invoices', req.params.id);
+    const invoiceDoc = await getDoc(invoiceRef);
+    if (!invoiceDoc.exists()) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const data = { ...invoiceDoc.data(), status: req.body.status };
+    await setDoc(invoiceRef, data);
+    res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -88,7 +125,8 @@ router.put('/:id/status', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.invoice.delete({ where: { id: req.params.id } });
+    const invoiceRef = doc(db, 'invoices', req.params.id);
+    await deleteDoc(invoiceRef);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
