@@ -10,7 +10,7 @@ const Clients = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', company: '', taxId: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', company: '', taxId: '', address: '', notes: '', image: '' });
   
   // Estados para panel de facturas de clientes
   const [selectedClient, setSelectedClient] = useState(null);
@@ -38,6 +38,17 @@ const Clients = () => {
     fetchSettings();
   }, []);
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleShowInvoices = async (client) => {
     setSelectedClient(client);
     setShowInvoicesDrawer(true);
@@ -45,8 +56,7 @@ const Clients = () => {
     try {
       const { data } = await api.get(`/clients/${client.id}`);
       setClientInvoices(data.invoices || []);
-    } catch (err) {
-      console.error(err);
+      setSelectedClient(data);
     } finally {
       setLoadingInvoices(false);
     }
@@ -77,7 +87,7 @@ const Clients = () => {
       }
       setShowModal(false);
       setEditingId(null);
-      setFormData({ name: '', email: '', phone: '', company: '', taxId: '' });
+      setFormData({ name: '', email: '', phone: '', company: '', taxId: '', address: '', notes: '', image: '' });
       fetchClients();
     } catch (error) {
       console.error(error);
@@ -92,7 +102,10 @@ const Clients = () => {
       email: client.email || '',
       phone: client.phone || '',
       company: client.company || '',
-      taxId: client.taxId || ''
+      taxId: client.taxId || '',
+      address: client.address || '',
+      notes: client.notes || '',
+      image: client.image || ''
     });
     setEditingId(client.id);
     setShowModal(true);
@@ -114,7 +127,7 @@ const Clients = () => {
           />
         </div>
         <button 
-          onClick={() => { setEditingId(null); setFormData({ name: '', email: '', phone: '', company: '', taxId: '' }); setShowModal(true); }}
+          onClick={() => { setEditingId(null); setFormData({ name: '', email: '', phone: '', company: '', taxId: '', address: '', notes: '', image: '' }); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm font-medium"
         >
           <Plus className="h-5 w-5" /> Nuevo Cliente
@@ -134,23 +147,30 @@ const Clients = () => {
             </thead>
             <tbody>
               {filtered.map(client => (
-                <tr key={client.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                <tr key={client.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer" onClick={() => handleShowInvoices(client)}>
                   <td className="px-6 py-4">
-                    <div 
-                      onClick={() => handleShowInvoices(client)}
-                      className="font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer hover:underline transition"
-                      title="Ver historial de facturas"
-                    >
-                      {client.name}
+                    <div className="flex items-center gap-3">
+                      {client.image ? (
+                        <img src={client.image} alt={client.name} className="w-10 h-10 object-cover rounded-full border border-gray-200 dark:border-gray-700" />
+                      ) : (
+                        <div className="w-10 h-10 bg-primary-100 dark:bg-primary-950/30 rounded-full flex items-center justify-center text-sm font-bold text-primary-700 dark:text-primary-400">
+                          {client.name ? client.name.charAt(0).toUpperCase() : 'C'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition">
+                          {client.name}
+                        </div>
+                        <div className="text-xs">{client.company || 'Independiente'}</div>
+                      </div>
                     </div>
-                    <div className="text-xs">{client.company || 'Independiente'}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div>{client.email || '-'}</div>
                     <div className="text-xs text-gray-400">{client.phone}</div>
                   </td>
                   <td className="px-6 py-4">{client.taxId || '-'}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button 
                         onClick={() => handleShowInvoices(client)} 
@@ -161,7 +181,7 @@ const Clients = () => {
                       </button>
                       <button onClick={() => handleEdit(client)} className="p-2 text-gray-400 hover:text-primary-600 transition bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-primary-200" title="Editar"><Edit2 className="w-4 h-4" /></button>
                       <button 
-                        onClick={async () => { await api.delete(`/clients/${client.id}`); fetchClients(); }}
+                        onClick={async () => { if(confirm("¿Seguro que deseas eliminar este cliente?")) { await api.delete(`/clients/${client.id}`); fetchClients(); } }}
                         className="p-2 text-gray-400 hover:text-red-600 transition bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-red-200"
                         title="Eliminar"
                       ><Trash2 className="w-4 h-4" /></button>
@@ -192,6 +212,23 @@ const Clients = () => {
                   {errorMsg}
                 </div>
               )}
+
+              {/* Client Image Section */}
+              <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                {formData.image ? (
+                  <div className="relative">
+                    <img src={formData.image} alt="Preview" className="w-16 h-16 object-cover rounded-full border" />
+                    <button type="button" onClick={() => setFormData({ ...formData, image: '' })} className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 text-xs">✕</button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs text-gray-400">Sin foto</div>
+                )}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Imagen de Perfil</label>
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-xs text-gray-500 file:mr-3 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">Nombre Completo *</label>
                 <input required type="text" className="w-full border p-2 rounded-lg bg-transparent" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -215,6 +252,14 @@ const Clients = () => {
                   <label className="block text-sm font-medium mb-1">Teléfono</label>
                   <input type="text" className="w-full border p-2 rounded-lg bg-transparent" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Dirección</label>
+                <input type="text" className="w-full border p-2 rounded-lg bg-transparent" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Notas / Observaciones</label>
+                <textarea className="w-full border p-2 rounded-lg bg-transparent h-20 resize-none text-xs" placeholder="Ej. Cliente preferencial, facturar a 30 días." value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} />
               </div>
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition">Cancelar</button>
@@ -257,9 +302,54 @@ const Clients = () => {
         </div>
 
         {/* Drawer Content */}
+        {/* Drawer Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {selectedClient && (
+            <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-150 dark:border-gray-700 flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                {selectedClient.image ? (
+                  <img src={selectedClient.image} alt={selectedClient.name} className="w-16 h-16 object-cover rounded-full border border-gray-200 dark:border-gray-700 shadow-sm" />
+                ) : (
+                  <div className="w-16 h-16 bg-primary-100 dark:bg-primary-950/30 rounded-full flex items-center justify-center text-2xl font-bold text-primary-700 dark:text-primary-400">
+                    {selectedClient.name ? selectedClient.name.charAt(0).toUpperCase() : 'C'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-base text-gray-900 dark:text-white truncate">{selectedClient.name}</h4>
+                  <p className="text-xs text-gray-500 truncate">{selectedClient.company || 'Cliente Independiente'}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-gray-150 dark:border-gray-700/50 pt-3">
+                <div>
+                  <span className="text-gray-400 font-medium">RUT / ID:</span>
+                  <p className="text-gray-800 dark:text-gray-200 font-semibold">{selectedClient.taxId || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400 font-medium">Teléfono:</span>
+                  <p className="text-gray-800 dark:text-gray-200 font-semibold">{selectedClient.phone || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-400 font-medium">Email:</span>
+                  <p className="text-gray-800 dark:text-gray-200 font-semibold truncate">{selectedClient.email || '-'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-400 font-medium">Dirección:</span>
+                  <p className="text-gray-800 dark:text-gray-200 font-semibold">{selectedClient.address || '-'}</p>
+                </div>
+              </div>
+
+              {selectedClient.notes && (
+                <div className="border-t border-gray-150 dark:border-gray-700/50 pt-3">
+                  <span className="text-xs text-gray-400 font-medium">Notas / Observaciones:</span>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 italic whitespace-pre-wrap">{selectedClient.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {loadingInvoices ? (
-            <div className="space-y-4 animate-pulse">
+            <div className="space-y-4 animate-pulse pt-4">
               <div className="h-20 bg-gray-100 dark:bg-gray-700 rounded-xl"></div>
               <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded-xl"></div>
               <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded-xl"></div>

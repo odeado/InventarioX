@@ -108,6 +108,49 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { clientId, status, subtotal, taxAmount, discount, total, notes, dueDate, items } = req.body;
+  try {
+    const invoiceRef = doc(db, 'invoices', id);
+    const invoiceDoc = await getDoc(invoiceRef);
+    if (!invoiceDoc.exists()) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Obtener detalles de productos para cada item
+    const itemsWithProducts = await Promise.all(items.map(async (item) => {
+      const productDoc = await getDoc(doc(db, 'products', item.productId));
+      const productData = productDoc.exists() ? productDoc.data() : { name: item.name };
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+        product: productData
+      };
+    }));
+
+    const invoiceData = {
+      ...invoiceDoc.data(),
+      clientId,
+      status: status || "PENDING",
+      subtotal,
+      taxAmount,
+      discount: discount || 0,
+      total,
+      notes: notes || null,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      items: itemsWithProducts
+    };
+
+    await setDoc(invoiceRef, invoiceData);
+    res.json(invoiceData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.put('/:id/status', async (req, res) => {
   try {
     const invoiceRef = doc(db, 'invoices', req.params.id);

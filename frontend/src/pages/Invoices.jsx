@@ -5,21 +5,23 @@ import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from '
 
 export const InvoicePDF = ({ invoice, settings }) => {
   const themeColor = settings?.themeColors || '#3b82f6';
+  const themeBgColor = settings?.themeBgColor || '#0f172a';
+  const themeTextColor = settings?.themeTextColor || '#ffffff';
   
   const styles = StyleSheet.create({
     page: { padding: 40, fontSize: 9, fontFamily: 'Helvetica', color: '#1e293b' },
     header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
     logoContainer: { flexDirection: 'row', alignItems: 'center' },
     logo: { width: 50, height: 50, marginRight: 10, borderRadius: 8 },
-    logoFallback: { width: 45, height: 45, marginRight: 10, borderRadius: 8, backgroundColor: themeColor, alignItems: 'center', justifyContent: 'center' },
-    logoText: { color: '#ffffff', fontSize: 20, fontFamily: 'Helvetica-Bold' },
+    logoFallback: { width: 45, height: 45, marginRight: 10, borderRadius: 8, backgroundColor: themeBgColor, alignItems: 'center', justifyContent: 'center' },
+    logoText: { color: themeTextColor, fontSize: 20, fontFamily: 'Helvetica-Bold' },
     companyName: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#0f172a' },
     companyDetails: { fontSize: 8, color: '#64748b', marginTop: 2 },
     
     docTitleContainer: { alignItems: 'flex-end', justifyContent: 'center' },
     docTitle: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: themeColor },
-    docNumberBox: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, backgroundColor: themeColor },
-    docNumber: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#ffffff' },
+    docNumberBox: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, backgroundColor: themeBgColor },
+    docNumber: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: themeTextColor },
     docStatus: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: themeColor, marginTop: 4, textTransform: 'uppercase' },
     
     divider: { height: 2, backgroundColor: themeColor, marginVertical: 10 },
@@ -31,8 +33,8 @@ export const InvoicePDF = ({ invoice, settings }) => {
     cardValue: { color: '#0f172a', fontSize: 7.5 },
     
     table: { width: '100%', marginBottom: 20 },
-    tableHeader: { flexDirection: 'row', backgroundColor: themeColor, borderTopLeftRadius: 4, borderTopRightRadius: 4, paddingVertical: 5 },
-    tableHeaderCell: { color: '#ffffff', fontFamily: 'Helvetica-Bold', fontSize: 8 },
+    tableHeader: { flexDirection: 'row', backgroundColor: themeBgColor, borderTopLeftRadius: 4, borderTopRightRadius: 4, paddingVertical: 5 },
+    tableHeaderCell: { color: themeTextColor, fontFamily: 'Helvetica-Bold', fontSize: 8 },
     tableRow: { flexDirection: 'row', borderBottom: '1 solid #f1f5f9', paddingVertical: 6, alignItems: 'center' },
     tableRowEven: { backgroundColor: '#f8fafc' },
     tableCell: { fontSize: 8, color: '#334155' },
@@ -229,6 +231,8 @@ const Invoices = () => {
   const [items, setItems] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+  const [editingInvoiceStatus, setEditingInvoiceStatus] = useState('PENDING');
 
   const fetchData = async () => {
     const [invRes, cliRes, prodRes, setRes] = await Promise.all([
@@ -246,6 +250,21 @@ const Invoices = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleEditClick = (inv) => {
+    setEditingInvoiceId(inv.id);
+    setClientId(inv.clientId);
+    setEditingInvoiceStatus(inv.status);
+    setItems(inv.items?.map(item => ({
+      productId: item.productId,
+      name: item.product?.name || item.name,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity
+    })) || []);
+    setSelectedProduct('');
+    setQuantity(1);
+    setShowModal(true);
+  };
 
   const addItem = () => {
     if (!selectedProduct || quantity < 1) return;
@@ -293,16 +312,24 @@ const Invoices = () => {
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
 
-    await api.post('/invoices', {
+    const payload = {
       clientId,
       items: finalItems,
       subtotal,
       taxAmount,
       total,
       discount: 0,
-    });
+      status: editingInvoiceId ? editingInvoiceStatus : 'PENDING'
+    };
+
+    if (editingInvoiceId) {
+      await api.put(`/invoices/${editingInvoiceId}`, payload);
+    } else {
+      await api.post('/invoices', payload);
+    }
 
     setShowModal(false);
+    setEditingInvoiceId(null);
     setClientId('');
     setItems([]);
     setSelectedProduct('');
@@ -353,7 +380,7 @@ const Invoices = () => {
             </thead>
             <tbody>
               {filtered.map(inv => (
-                <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer" onClick={() => handleEditClick(inv)}>
                   <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">{inv.number}</td>
                   <td className="px-6 py-4">{inv.client?.name}</td>
                   <td className="px-6 py-4">{new Date(inv.createdAt).toLocaleDateString()}</td>
@@ -365,7 +392,7 @@ const Invoices = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">${inv.total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       {inv.status !== 'PAID' && (
                          <button onClick={() => handleStatusChange(inv.id, 'PAID')} className="p-2 text-green-600 hover:bg-green-50 transition rounded-lg border border-transparent hover:border-green-200" title="Marcar Pagada">
@@ -380,7 +407,7 @@ const Invoices = () => {
                         )}
                       </PDFDownloadLink>
                       <button 
-                        onClick={async () => { await api.delete(`/invoices/${inv.id}`); fetchData(); }}
+                        onClick={async () => { if(confirm("¿Seguro que deseas eliminar esta factura?")) { await api.delete(`/invoices/${inv.id}`); fetchData(); } }}
                         className="p-2 text-gray-400 hover:text-red-600 transition hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200" title="Eliminar"
                       ><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -396,15 +423,28 @@ const Invoices = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crear Factura</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingInvoiceId ? 'Modificar Factura' : 'Crear Factura'}
+              </h3>
             </div>
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-1">Cliente *</label>
-                <select className="w-full border p-2.5 rounded-xl bg-transparent" value={clientId} onChange={e => setClientId(e.target.value)}>
-                  <option value="">Seleccione un cliente...</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cliente *</label>
+                  <select className="w-full border p-2.5 rounded-xl bg-transparent" value={clientId} onChange={e => setClientId(e.target.value)}>
+                    <option value="">Seleccione un cliente...</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                {editingInvoiceId && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Estado de Pago</label>
+                    <select className="w-full border p-2.5 rounded-xl bg-transparent" value={editingInvoiceStatus} onChange={e => setEditingInvoiceStatus(e.target.value)}>
+                      <option value="PENDING">PENDIENTE</option>
+                      <option value="PAID">PAGADA</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -435,7 +475,7 @@ const Invoices = () => {
                           <td className="py-2">{item.quantity}</td>
                           <td className="py-2">${(item.unitPrice * item.quantity).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</td>
                           <td className="py-2 text-right">
-                            <button onClick={() => removeItem(i)} className="text-red-500 hover:text-red-700">X</button>
+                            <button type="button" onClick={() => removeItem(i)} className="text-red-500 hover:text-red-700">X</button>
                           </td>
                         </tr>
                       ))}
@@ -450,8 +490,10 @@ const Invoices = () => {
                  <p className="font-bold text-lg text-gray-900 dark:text-white">Total aprox: ${(items.reduce((a,b) => a + (b.unitPrice * b.quantity), 0) * (1 + (settings?.taxRate || 0)/100)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</p>
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-xl transition">Cancelar</button>
-                <button onClick={handleCreate} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition shadow-sm font-medium">Emitir Factura</button>
+                <button type="button" onClick={() => { setShowModal(false); setEditingInvoiceId(null); }} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-xl transition">Cancelar</button>
+                <button onClick={handleCreate} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition shadow-sm font-medium">
+                  {editingInvoiceId ? 'Guardar Cambios' : 'Emitir Factura'}
+                </button>
               </div>
             </div>
           </div>

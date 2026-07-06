@@ -8,7 +8,7 @@ const Products = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const [formData, setFormData] = useState({ name: '', sku: '', price: '', stock: '', category: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', sku: '', price: '', stock: '', category: '', description: '', image: '' });
 
   const fetchProducts = async () => {
     const { data } = await api.get('/products');
@@ -18,6 +18,17 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +53,7 @@ const Products = () => {
       }
       setShowModal(false);
       setEditingId(null);
-      setFormData({ name: '', sku: '', price: '', stock: '', category: '', description: '' });
+      setFormData({ name: '', sku: '', price: '', stock: '', category: '', description: '', image: '' });
       fetchProducts();
     } catch (error) {
       console.error(error);
@@ -58,7 +69,8 @@ const Products = () => {
       price: prod.price || '',
       stock: prod.stock || '',
       category: prod.category || '',
-      description: prod.description || ''
+      description: prod.description || '',
+      image: prod.image || ''
     });
     setEditingId(prod.id);
     setShowModal(true);
@@ -80,7 +92,7 @@ const Products = () => {
           />
         </div>
         <button 
-          onClick={() => { setEditingId(null); setFormData({ name: '', sku: '', price: '', stock: '', category: '', description: '' }); setShowModal(true); }}
+          onClick={() => { setEditingId(null); setFormData({ name: '', sku: '', price: '', stock: '', category: '', description: '', image: '' }); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition shadow-sm font-medium"
         >
           <Plus className="h-5 w-5" /> Nuevo Producto
@@ -101,10 +113,21 @@ const Products = () => {
             </thead>
             <tbody>
               {filtered.map(prod => (
-                <tr key={prod.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                <tr key={prod.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer" onClick={() => handleEdit(prod)}>
                   <td className="px-6 py-4">
-                    <div className="font-semibold text-gray-900 dark:text-white">{prod.name}</div>
-                    <div className="text-xs">{prod.category || 'Sin categoría'}</div>
+                    <div className="flex items-center gap-3">
+                      {prod.image ? (
+                        <img src={prod.image} alt={prod.name} className="w-10 h-10 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700/50 rounded-lg flex items-center justify-center text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase">
+                          No Pic
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white">{prod.name}</div>
+                        <div className="text-xs">{prod.category || 'Sin categoría'}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4">{prod.sku || '-'}</td>
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">${prod.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</td>
@@ -113,11 +136,11 @@ const Products = () => {
                       {prod.stock} un.
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button onClick={() => handleEdit(prod)} className="p-2 text-gray-400 hover:text-primary-600 transition bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-primary-200"><Edit2 className="w-4 h-4" /></button>
                       <button 
-                        onClick={async () => { await api.delete(`/products/${prod.id}`); fetchProducts(); }}
+                        onClick={async () => { if(confirm("¿Seguro que deseas eliminar este producto?")) { await api.delete(`/products/${prod.id}`); fetchProducts(); } }}
                         className="p-2 text-gray-400 hover:text-red-600 transition bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-red-200"
                       ><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -147,6 +170,23 @@ const Products = () => {
                   {errorMsg}
                 </div>
               )}
+              
+              {/* Product Image Section */}
+              <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                {formData.image ? (
+                  <div className="relative">
+                    <img src={formData.image} alt="Preview" className="w-16 h-16 object-cover rounded-lg border" />
+                    <button type="button" onClick={() => setFormData({ ...formData, image: '' })} className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 text-xs">✕</button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs text-gray-400">Sin foto</div>
+                )}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-1">Imagen del Producto</label>
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-xs text-gray-500 file:mr-3 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">Nombre de Producto *</label>
                 <input required type="text" className="w-full border p-2 rounded-lg bg-transparent" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />

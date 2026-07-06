@@ -14,6 +14,8 @@ const Settings = () => {
     invoicePrefix: 'INV-',
     logoUrl: '',
     themeColors: '#3b82f6',
+    themeBgColor: '#0f172a',
+    themeTextColor: '#ffffff',
     taxId: '',
     activity: '',
     invoiceFooter: ''
@@ -63,17 +65,31 @@ const Settings = () => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Identidad Visual</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-3">
               <label className="block text-sm font-medium mb-1">URL del Logo</label>
               <input type="text" placeholder="https://ejemplo.com/logo.png" className="w-full border p-2.5 rounded-xl bg-transparent focus:ring-2 focus:ring-primary-500 outline-none" value={settings.logoUrl || ''} onChange={e => setSettings({...settings, logoUrl: e.target.value})} />
               <p className="text-xs text-gray-400 mt-1">Puedes poner un enlace a una imagen, o dejar en blanco para usar el ícono por defecto.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Color Principal (Hex)</label>
+              <label className="block text-sm font-medium mb-1">Color Principal Accent (Hex)</label>
               <div className="flex gap-2">
                 <input type="color" className="h-11 w-11 rounded cursor-pointer border-0 p-0" value={settings.themeColors || '#3b82f6'} onChange={e => setSettings({...settings, themeColors: e.target.value})} />
                 <input type="text" className="flex-1 border p-2.5 rounded-xl bg-transparent focus:ring-2 focus:ring-primary-500 outline-none uppercase" value={settings.themeColors || '#3b82f6'} onChange={e => setSettings({...settings, themeColors: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Color Fondo Cabecera</label>
+              <div className="flex gap-2">
+                <input type="color" className="h-11 w-11 rounded cursor-pointer border-0 p-0" value={settings.themeBgColor || '#0f172a'} onChange={e => setSettings({...settings, themeBgColor: e.target.value})} />
+                <input type="text" className="flex-1 border p-2.5 rounded-xl bg-transparent focus:ring-2 focus:ring-primary-500 outline-none uppercase" value={settings.themeBgColor || '#0f172a'} onChange={e => setSettings({...settings, themeBgColor: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Color Letra Cabecera</label>
+              <div className="flex gap-2">
+                <input type="color" className="h-11 w-11 rounded cursor-pointer border-0 p-0" value={settings.themeTextColor || '#ffffff'} onChange={e => setSettings({...settings, themeTextColor: e.target.value})} />
+                <input type="text" className="flex-1 border p-2.5 rounded-xl bg-transparent focus:ring-2 focus:ring-primary-500 outline-none uppercase" value={settings.themeTextColor || '#ffffff'} onChange={e => setSettings({...settings, themeTextColor: e.target.value})} />
               </div>
             </div>
           </div>
