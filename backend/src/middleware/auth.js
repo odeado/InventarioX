@@ -1,19 +1,7 @@
-const jwt = require('jsonwebtoken');
-
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey');
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  // Siempre autorizar las peticiones como el usuario administrador
+  req.user = { id: '1', role: 'ADMIN' };
+  next();
 };
 
 module.exports = authMiddleware;
